@@ -20,7 +20,7 @@ module tt_um_ultrasage_danz (
     wire invalid_flag;
     
     // Connect internal signals to outputs
-    assign uo_out = {6'b0, pump, invalid_flag};
+    assign uo_out = {6'b0, invalid_flag, pump};
     assign uio_out = 8'b0;
     assign uio_oe = 8'b0;
     

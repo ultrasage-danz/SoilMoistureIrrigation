@@ -25,7 +25,6 @@ module tt_um_ultrasage_danz (
     assign uio_oe = 8'b0;
     
     // Convert active-low reset to active-high for your state machine
-    wire rst = ~rst_n;
 
     // ─── Comparator Encoding ───────────────────────────────────────────
     // {comp1, comp0} = 2'b00 → V < Vref_low → DRY → IRRIGATE
@@ -46,8 +45,8 @@ module tt_um_ultrasage_danz (
     reg [1:0] current_state, next_state;
 
     // ─── State Memory (Synchronous Reset) ─────────────────────────────
-    always @(posedge clk) begin
-        if (rst)
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
             current_state <= IDLE;
         else
             current_state <= next_state;

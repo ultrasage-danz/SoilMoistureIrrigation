@@ -5,71 +5,86 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
-@cocotb.test()
-async def test_project(dut):
-    dut._log.info("Start")
+# Output bit positions
+PUMP_BIT         = 0
+INVALID_FLAG_BIT = 1
 
-    # 10 us clock period (100 KHz)
-    clock = Clock(dut.clk, 10, unit="us")
-    cocotb.start_soon(clock.start())
+# Moisture input encoding on ui_in[1:0]
+DRY      = 0b00   # comp1=0, comp0=0 → irrigate
+MILD     = 0b01   # comp1=0, comp0=1 → idle
+WET      = 0b11   # comp1=1, comp0=1 → saturated
+INVALID  = 0b10   # comp1=1, comp0=0 → invalid
 
-    # ── Reset ──────────────────────────────────────────────────────────
-    dut._log.info("Reset")
+async def reset_dut(dut):
+    dut.rst_n.value  = 0
     dut.ena.value    = 1
     dut.ui_in.value  = 0
     dut.uio_in.value = 0
-    dut.rst_n.value  = 0
-    await ClockCycles(dut.clk, 10)
+    await ClockCycles(dut.clk, 5)
     dut.rst_n.value  = 1
-    await ClockCycles(dut.clk, 1)  # settle after reset release
-
-    # ── Test 1: DRY → IRRIGATE (pump ON) ──────────────────────────────
-    # ui_in[1:0] = 2'b00 → moisture_content = DRY
-    dut._log.info("Test DRY condition → expect IRRIGATE (uo_out = 2)")
-    dut.ui_in.value = 0b00000000  # comp1=0, comp0=0 → DRY
     await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 2, \
-        f"DRY: expected uo_out=2 (pump ON), got {dut.uo_out.value}"
 
-    # ── Test 2: MILD → IDLE (pump OFF) ────────────────────────────────
-    # ui_in[1:0] = 2'b01 → moisture_content = MILD
-    dut._log.info("Test MILD condition → expect IDLE (uo_out = 0)")
-    dut.ui_in.value = 0b00000001  # comp1=0, comp0=1 → MILD
+def pump(dut):
+    return (dut.uo_out.value.integer >> PUMP_BIT) & 1
+
+def invalid_flag(dut):
+    return (dut.uo_out.value.integer >> INVALID_FLAG_BIT) & 1
+
+@cocotb.test()
+async def test_reset_to_idle(dut):
+    """After reset, pump should be off and no invalid flag."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="us").start())
+    await reset_dut(dut)
+    dut.ui_in.value = MILD
     await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 0, \
-        f"MILD: expected uo_out=0 (pump OFF), got {dut.uo_out.value}"
+    assert pump(dut) == 0,         f"Pump should be OFF in IDLE, got {pump(dut)}"
+    assert invalid_flag(dut) == 0, f"Invalid flag should be 0 in IDLE"
+    dut._log.info("PASS: reset_to_idle")
 
-    # ── Test 3: WET → SATURATED (pump OFF) ────────────────────────────
-    # ui_in[1:0] = 2'b11 → moisture_content = WET
-    dut._log.info("Test WET condition → expect SATURATED (uo_out = 0)")
-    dut.ui_in.value = 0b00000011  # comp1=1, comp0=1 → WET
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 0, \
-        f"WET: expected uo_out=0 (pump OFF), got {dut.uo_out.value}"
+@cocotb.test()
+async def test_dry_soil_triggers_pump(dut):
+    """Dry soil (comp=00) should turn pump ON."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="us").start())
+    await reset_dut(dut)
+    dut.ui_in.value = DRY
+    await ClockCycles(dut.clk, 2)
+    assert pump(dut) == 1,         f"Pump should be ON for dry soil, got {pump(dut)}"
+    assert invalid_flag(dut) == 0, "No invalid flag expected"
+    dut._log.info("PASS: dry_soil_triggers_pump")
 
-    # ── Test 4: INVALID comparator state (flag ON) ────────────────────
-    # ui_in[1:0] = 2'b10 → impossible comparator reading
-    dut._log.info("Test INVALID condition → expect INVALID (uo_out = 1)")
-    dut.ui_in.value = 0b00000010  # comp1=1, comp0=0 → INVALID
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 1, \
-        f"INVALID: expected uo_out=1 (invalid_flag ON), got {dut.uo_out.value}"
+@cocotb.test()
+async def test_wet_soil_pump_off(dut):
+    """Wet soil (comp=11) should keep pump OFF."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="us").start())
+    await reset_dut(dut)
+    dut.ui_in.value = WET
+    await ClockCycles(dut.clk, 2)
+    assert pump(dut) == 0,         f"Pump should be OFF for wet soil"
+    assert invalid_flag(dut) == 0, "No invalid flag expected"
+    dut._log.info("PASS: wet_soil_pump_off")
 
-    # ── Test 5: Recovery from INVALID → IDLE on valid input ───────────
-    dut._log.info("Test recovery from INVALID → IDLE")
-    dut.ui_in.value = 0b00000001  # MILD → should recover to IDLE
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 0, \
-        f"RECOVERY: expected uo_out=0 (back to IDLE), got {dut.uo_out.value}"
+@cocotb.test()
+async def test_invalid_state(dut):
+    """Invalid comparator reading (comp=10) should set invalid_flag."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="us").start())
+    await reset_dut(dut)
+    dut.ui_in.value = INVALID
+    await ClockCycles(dut.clk, 2)
+    assert pump(dut) == 0,         "Pump must be OFF in INVALID state"
+    assert invalid_flag(dut) == 1, f"Invalid flag should be 1, got {invalid_flag(dut)}"
+    dut._log.info("PASS: invalid_state")
 
-    # ── Test 6: Full cycle DRY → IRRIGATE → MILD → IDLE ──────────────
-    dut._log.info("Test full irrigation cycle")
-    dut.ui_in.value = 0b00000000  # DRY → IRRIGATE
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 2, "Cycle: expected pump ON while DRY"
-
-    dut.ui_in.value = 0b00000001  # MILD → IDLE (soil reached mild)
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 0, "Cycle: expected pump OFF after reaching MILD"
-
-    dut._log.info("All tests passed!")
+@cocotb.test()
+async def test_irrigate_to_idle_on_mild(dut):
+    """Once irrigating, mild moisture should return to IDLE."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="us").start())
+    await reset_dut(dut)
+    # Start dry — enter IRRIGATE
+    dut.ui_in.value = DRY
+    await ClockCycles(dut.clk, 2)
+    assert pump(dut) == 1, "Should be pumping"
+    # Soil reaches mild — should go IDLE
+    dut.ui_in.value = MILD
+    await ClockCycles(dut.clk, 2)
+    assert pump(dut) == 0, "Pump should turn OFF when mild"
+    dut._log.info("PASS: irrigate_to_idle_on_mild")

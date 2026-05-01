@@ -25,15 +25,15 @@ async def reset_dut(dut):
     await ClockCycles(dut.clk, 1)
 
 def pump(dut):
-    return (dut.uo_out.value.integer >> PUMP_BIT) & 1
+    return (dut.uo_out.value.to_unsigned() >> PUMP_BIT) & 1
 
 def invalid_flag(dut):
-    return (dut.uo_out.value.integer >> INVALID_FLAG_BIT) & 1
+    return (dut.uo_out.value.to_unsigned() >> INVALID_FLAG_BIT) & 1
 
 @cocotb.test()
 async def test_reset_to_idle(dut):
     """After reset, pump should be off and no invalid flag."""
-    cocotb.start_soon(Clock(dut.clk, 10, units="us").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="us").start())
     await reset_dut(dut)
     dut.ui_in.value = MILD
     await ClockCycles(dut.clk, 1)
@@ -44,7 +44,7 @@ async def test_reset_to_idle(dut):
 @cocotb.test()
 async def test_dry_soil_triggers_pump(dut):
     """Dry soil (comp=00) should turn pump ON."""
-    cocotb.start_soon(Clock(dut.clk, 10, units="us").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="us").start())
     await reset_dut(dut)
     dut.ui_in.value = DRY
     await ClockCycles(dut.clk, 2)
@@ -55,7 +55,7 @@ async def test_dry_soil_triggers_pump(dut):
 @cocotb.test()
 async def test_wet_soil_pump_off(dut):
     """Wet soil (comp=11) should keep pump OFF."""
-    cocotb.start_soon(Clock(dut.clk, 10, units="us").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="us").start())
     await reset_dut(dut)
     dut.ui_in.value = WET
     await ClockCycles(dut.clk, 2)
@@ -66,7 +66,7 @@ async def test_wet_soil_pump_off(dut):
 @cocotb.test()
 async def test_invalid_state(dut):
     """Invalid comparator reading (comp=10) should set invalid_flag."""
-    cocotb.start_soon(Clock(dut.clk, 10, units="us").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="us").start())
     await reset_dut(dut)
     dut.ui_in.value = INVALID
     await ClockCycles(dut.clk, 2)
@@ -77,7 +77,7 @@ async def test_invalid_state(dut):
 @cocotb.test()
 async def test_irrigate_to_idle_on_mild(dut):
     """Once irrigating, mild moisture should return to IDLE."""
-    cocotb.start_soon(Clock(dut.clk, 10, units="us").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="us").start())
     await reset_dut(dut)
     # Start dry — enter IRRIGATE
     dut.ui_in.value = DRY

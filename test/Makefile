@@ -6,7 +6,7 @@ SIM ?= icarus
 FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = src/SoilMoistureIrrigationController.v
+PROJECT_SOURCES = SoilMoistureIrrigationController.v
 
 ifneq ($(GATES),yes)
 

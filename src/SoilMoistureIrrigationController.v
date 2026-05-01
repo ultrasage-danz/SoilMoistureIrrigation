@@ -20,7 +20,7 @@ module tt_um_ultrasage_danz (
     wire invalid_flag;
     
     // Connect internal signals to outputs
-    assign uo_out = {6'b0, invalid_flag, pump};
+    assign uo_out = {6'b0, pump, invalid_flag};
     assign uio_out = 8'b0;
     assign uio_oe = 8'b0;
     
@@ -101,6 +101,7 @@ module tt_um_ultrasage_danz (
     end
 
     // ─── Output Logic (Moore) ─────────────────────────────────────────
+    reg pump_internal, invalid_flag_internal;
     always @(*) begin
         // Safe defaults
         pump_internal = 1'b0;
@@ -115,7 +116,7 @@ module tt_um_ultrasage_danz (
         endcase
     end
 
-    reg pump_internal, invalid_flag_internal;
+    
     assign pump = pump_internal;
     assign invalid_flag = invalid_flag_internal;
 

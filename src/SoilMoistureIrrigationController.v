@@ -1,19 +1,38 @@
+`default_nettype none
+
 module tt_um_ultrasage_danz (
     input wire clk,
-    input wire rst, // Synchronous, active-high reset
-    input wire comp0,
-    input wire comp1,
-    input wire ena,
-    output reg pump,
-    output reg invalid_flag
+    input wire rst_n,           // active-low reset
+    input wire ena,             // enable signal
+    input wire [7:0] ui_in,     // Dedicated inputs
+    input wire [7:0] uio_in,    // IOs: Input path
+    output wire [7:0] uo_out,   // Dedicated outputs
+    output wire [7:0] uio_out,  // IOs: Output path
+    output wire [7:0] uio_oe    // IOs: Enable path
 );
+
+    // Extract your design inputs from the standard interface
+    wire comp0 = ui_in[0];
+    wire comp1 = ui_in[1];
+    
+    // Internal signals
+    wire pump;
+    wire invalid_flag;
+    
+    // Connect internal signals to outputs
+    assign uo_out = {6'b0, invalid_flag, pump};
+    assign uio_out = 8'b0;
+    assign uio_oe = 8'b0;
+    
+    // Convert active-low reset to active-high for your state machine
+    wire rst = ~rst_n;
 
     // ─── Comparator Encoding ───────────────────────────────────────────
     // {comp1, comp0} = 2'b00 → V < Vref_low → DRY → IRRIGATE
     // {comp1, comp0} = 2'b01 → Vref_low < V < Vref_high → MILD → IDLE
     // {comp1, comp0} = 2'b11 → V > Vref_high → WET → SATURATED
     // {comp1, comp0} = 2'b10 → INVALID (impossible comparator state)
-    // ──────────────────────────────────────────────────────────────────
+    // ───────────────────────────────────────────────────────────────────
 
     wire [1:0] moisture_content;
     assign moisture_content = {comp1, comp0};
@@ -41,15 +60,12 @@ module tt_um_ultrasage_danz (
 
         case (current_state)
 
-            
             IDLE: begin 
-                if (invalid) next_state = INVALID;
+                if (moisture_content == 2'b10) next_state = INVALID;  // Invalid comparator
                 else if (moisture_content == 2'b00) next_state = IRRIGATE;
                 else if (moisture_content == 2'b01) next_state = IDLE;
                 else next_state = SATURATED;
             end
-    
-            
 
             IRRIGATE: begin
                 case (moisture_content)
@@ -87,16 +103,20 @@ module tt_um_ultrasage_danz (
     // ─── Output Logic (Moore) ─────────────────────────────────────────
     always @(*) begin
         // Safe defaults
-        pump = 1'b0;
-        invalid_flag = 1'b0;
+        pump_internal = 1'b0;
+        invalid_flag_internal = 1'b0;
 
         case (current_state)
-            IDLE: begin pump = 1'b0; invalid_flag = 1'b0; end
-            IRRIGATE: begin pump = 1'b1; invalid_flag = 1'b0; end // Pump ON
-            SATURATED: begin pump = 1'b0; invalid_flag = 1'b0; end // Pump OFF
-            INVALID: begin pump = 1'b0; invalid_flag = 1'b1; end // Flag fault
-            default: begin pump = 1'b0; invalid_flag = 1'b0; end
+            IDLE: begin pump_internal = 1'b0; invalid_flag_internal = 1'b0; end
+            IRRIGATE: begin pump_internal = 1'b1; invalid_flag_internal = 1'b0; end // Pump ON
+            SATURATED: begin pump_internal = 1'b0; invalid_flag_internal = 1'b0; end // Pump OFF
+            INVALID: begin pump_internal = 1'b0; invalid_flag_internal = 1'b1; end // Flag fault
+            default: begin pump_internal = 1'b0; invalid_flag_internal = 1'b0; end
         endcase
     end
+
+    reg pump_internal, invalid_flag_internal;
+    assign pump = pump_internal;
+    assign invalid_flag = invalid_flag_internal;
 
 endmodule

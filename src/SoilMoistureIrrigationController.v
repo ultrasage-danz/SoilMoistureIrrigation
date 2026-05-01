@@ -1,4 +1,4 @@
-module moisture_irrigation (
+module tt_um_ultrasage_danz (
     input wire clk,
     input wire rst, // Synchronous, active-high reset
     input wire comp0,

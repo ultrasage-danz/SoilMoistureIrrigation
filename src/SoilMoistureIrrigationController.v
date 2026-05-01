@@ -3,6 +3,7 @@ module tt_um_ultrasage_danz (
     input wire rst, // Synchronous, active-high reset
     input wire comp0,
     input wire comp1,
+    input wire ena,
     output reg pump,
     output reg invalid_flag
 );

@@ -21,7 +21,7 @@ async def do_reset(dut, ui_in_val=0b00000001):
     dut.rst_n.value  = 0
     await ClockCycles(dut.clk, 5)
     dut.rst_n.value  = 1
-    await ClockCycles(dut.clk, 1)
+    await ClockCycles(dut.clk, 3)  # flush sync pipeline after reset
 
 async def settle_after_clock(dut, cycles=1, delay_ns=1):
     await ClockCycles(dut.clk, cycles)

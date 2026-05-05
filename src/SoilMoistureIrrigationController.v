@@ -3,7 +3,6 @@
 module tt_um_ultrasage_danz (
     input wire clk,
     input wire rst_n,           // active-low reset
-	 input wire rst,
     input wire ena,             // enable signal
     input wire [7:0] ui_in,     // Dedicated inputs
     input wire [7:0] uio_in,    // IOs: Input path

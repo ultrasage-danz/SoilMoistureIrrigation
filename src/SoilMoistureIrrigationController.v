@@ -3,6 +3,7 @@
 module tt_um_ultrasage_danz (
     input wire clk,
     input wire rst_n,           // active-low reset
+	 input wire rst,
     input wire ena,             // enable signal
     input wire [7:0] ui_in,     // Dedicated inputs
     input wire [7:0] uio_in,    // IOs: Input path
@@ -43,6 +44,26 @@ module tt_um_ultrasage_danz (
                      INVALID = 2'b11;
 
     reg [1:0] current_state, next_state;
+	 
+	 reg [1:0] moisture_content_s1, moisture_content_s2;
+	 
+	 // synchronize the inputs
+	 always @(posedge clk) begin
+	 if (rst) begin
+		moisture_content_s1 <= 2'b00;
+	   moisture_content_s2 <= 2'b00;  
+	 
+	 end
+	 
+	 else
+	 moisture_content_s1 <= moisture_content;  //stage 1
+	 moisture_content_s2 <= moisture_content_s1;  //stage 2
+	 
+	 
+	 
+	 end
+	 
+	 
 
     // ─── State Memory (Synchronous Reset) ─────────────────────────────
     always @(posedge clk or negedge rst_n) begin
@@ -60,41 +81,35 @@ module tt_um_ultrasage_danz (
         case (current_state)
 
             IDLE: begin 
-                if (moisture_content == 2'b10) next_state = INVALID;  // Invalid comparator
-                else if (moisture_content == 2'b00) next_state = IRRIGATE;
-                else if (moisture_content == 2'b01) next_state = IDLE;
+                if (moisture_content_s2 == 2'b10) next_state = INVALID;  // Invalid comparator
+                else if (moisture_content_s2 == 2'b00) next_state = IRRIGATE;
+                else if (moisture_content_s2 == 2'b01) next_state = IDLE;
                 else next_state = SATURATED;
             end
 
             IRRIGATE: begin
-                case (moisture_content)
-                    2'b10: next_state = INVALID; // Invalid comparator
-                    2'b00: next_state = IRRIGATE; // Still dry → keep pumping
-                    2'b01: next_state = IDLE; // Reached mild → idle
-                    2'b11: next_state = SATURATED; // Overshot → saturated
-                    default: next_state = INVALID;
-                endcase
+                if (moisture_content_s2 == 2'b10) next_state = INVALID;  // Invalid comparator
+                else if (moisture_content_s2 == 2'b00) next_state = IRRIGATE;
+                else if (moisture_content_s2 == 2'b01) next_state = IDLE;
+                else next_state = SATURATED;
             end
 
             SATURATED: begin
-                case (moisture_content)
-                    2'b10: next_state = INVALID; // Invalid comparator
-                    2'b11: next_state = SATURATED; // Still wet → stay
-                    2'b01: next_state = IDLE; // Dried to mild → idle
-                    2'b00: next_state = IRRIGATE; // Dried to low → irrigate
-                    default: next_state = INVALID;
-                endcase
+                if (moisture_content_s2 == 2'b10) next_state = INVALID;  // Invalid comparator
+                else if (moisture_content_s2 == 2'b00) next_state = IRRIGATE;
+                else if (moisture_content_s2 == 2'b01) next_state = IDLE;
+                else next_state = SATURATED;
             end
 
             INVALID: begin
                 // Only escape on reset; hold until RST clears the fault
-                if (moisture_content != 2'b10)
-                    next_state = IDLE; // Comparators back to valid → recover
-                else
-                    next_state = INVALID;
-            end
+                if (moisture_content_s2 != 2'b10) 
+						next_state = IDLE;
+					 else next_state = INVALID;
+				end
 
             default: next_state = IDLE;
+				
 
         endcase
     end

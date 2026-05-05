@@ -49,7 +49,7 @@ module tt_um_ultrasage_danz (
 	 
 	 // synchronize the inputs
 	 always @(posedge clk) begin
-	 if (rst) begin
+	 if (rst_n) begin
 		moisture_content_s1 <= 2'b00;
 	   moisture_content_s2 <= 2'b00;  
 	 

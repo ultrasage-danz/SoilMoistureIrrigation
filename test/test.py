@@ -24,21 +24,11 @@ async def do_reset(dut, ui_in_val=0b00000001):
     await ClockCycles(dut.clk, 1)
 
 async def settle_after_clock(dut, cycles=1, delay_ns=1):
-    """
-    Gate-level sims add propagation delay, so outputs may not be stable
-    immediately after a clock edge. Wait a small amount of time, then sample
-    during the ReadOnly phase to avoid race conditions.
-    """
     await ClockCycles(dut.clk, cycles)
     await Timer(delay_ns, "ns")
     await ReadOnly()
 
 async def exit_readonly(dut):
-    """
-    After settle_after_clock() we are parked in ReadOnly.
-    Driving signals requires leaving that phase first — wait for
-    the next rising edge so we are back in the active region.
-    """
     await RisingEdge(dut.clk)
 
 @cocotb.test()
@@ -55,7 +45,7 @@ async def test_dry_soil_triggers_pump(dut):
     """Dry soil (comp=00) should turn pump ON."""
     await do_reset(dut, ui_in_val=0b00000001)
     dut.ui_in.value = 0b00000000
-    await settle_after_clock(dut, cycles=2)
+    await settle_after_clock(dut, cycles=3)  # 2 sync stages + 1 FSM cycle
     assert pump(dut) == 1,         f"Pump should be ON for dry soil, got {pump(dut)}"
     assert invalid_flag(dut) == 0, f"Invalid flag should be 0, got {invalid_flag(dut)}"
     dut._log.info("PASS: dry_soil_triggers_pump")
@@ -65,7 +55,7 @@ async def test_wet_soil_pump_off(dut):
     """Wet soil (comp=11) should keep pump OFF."""
     await do_reset(dut, ui_in_val=0b00000001)
     dut.ui_in.value = 0b00000011
-    await settle_after_clock(dut, cycles=2)
+    await settle_after_clock(dut, cycles=3)  # 2 sync stages + 1 FSM cycle
     assert pump(dut) == 0,         f"Pump should be OFF for wet soil, got {pump(dut)}"
     assert invalid_flag(dut) == 0, f"Invalid flag should be 0, got {invalid_flag(dut)}"
     dut._log.info("PASS: wet_soil_pump_off")
@@ -75,7 +65,7 @@ async def test_invalid_state(dut):
     """Invalid comparator reading (comp=10) should set invalid_flag."""
     await do_reset(dut, ui_in_val=0b00000001)
     dut.ui_in.value = 0b00000010
-    await settle_after_clock(dut, cycles=2)
+    await settle_after_clock(dut, cycles=3)  # 2 sync stages + 1 FSM cycle
     assert pump(dut) == 0,         "Pump must be OFF in INVALID state"
     assert invalid_flag(dut) == 1, f"Invalid flag should be 1, got {invalid_flag(dut)}"
     dut._log.info("PASS: invalid_state")
@@ -87,15 +77,14 @@ async def test_irrigate_to_idle_on_mild(dut):
 
     # Step 1: drive dry soil and wait for IRRIGATE to latch
     dut.ui_in.value = 0b00000000
-    await settle_after_clock(dut, cycles=2)
+    await settle_after_clock(dut, cycles=3)  # 2 sync stages + 1 FSM cycle
     assert pump(dut) == 1, "Should be pumping"
 
-    # FIX: exit ReadOnly before driving the next stimulus
     await exit_readonly(dut)
 
     # Step 2: drive mild soil and wait for IDLE to latch
     dut.ui_in.value = 0b00000001
-    await settle_after_clock(dut, cycles=2)
+    await settle_after_clock(dut, cycles=3)  # 2 sync stages + 1 FSM cycle
     assert pump(dut) == 0,         "Pump should be OFF after reaching MILD"
     assert invalid_flag(dut) == 0, "No invalid flag after returning to IDLE"
     dut._log.info("PASS: irrigate_to_idle_on_mild")

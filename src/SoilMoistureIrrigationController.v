@@ -54,11 +54,11 @@ module tt_um_ultrasage_danz (
 	 
 	 end
 	 
-	 else
+	 else begin
 	 moisture_content_s1 <= moisture_content;  //stage 1
 	 moisture_content_s2 <= moisture_content_s1;  //stage 2
 	 
-	 
+	 end
 	 
 	 end
 	 

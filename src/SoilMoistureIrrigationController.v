@@ -18,13 +18,13 @@ module tt_um_ultrasage_danz (
     // Internal signals
     wire pump;
     wire invalid_flag;
-    
+
+	reg pump_internal, invalid_flag_internal;
     // Connect internal signals to outputs
     assign uo_out = {6'b0, invalid_flag, pump};
     assign uio_out = 8'b0;
     assign uio_oe = 8'b0;
     
-    // Convert active-low reset to active-high for your state machine
 
     // ─── Comparator Encoding ───────────────────────────────────────────
     // {comp1, comp0} = 2'b00 → V < Vref_low → DRY → IRRIGATE
@@ -64,8 +64,8 @@ module tt_um_ultrasage_danz (
 	 
 	 
 
-    // ─── State Memory (Synchronous Reset) ─────────────────────────────
-    always @(posedge clk or negedge rst_n) begin
+	// ─── State Memory (Synchronous Reset) ─────────────────────────────
+    always @(posedge clk) begin
         if (!rst_n)
             current_state <= IDLE;
         else
@@ -75,7 +75,7 @@ module tt_um_ultrasage_danz (
     // ─── Next State Logic ──────────────────────────────────────────────
     always @(*) begin
         // Default: hold current state
-        next_state = current_state;
+
 
         case (current_state)
 
@@ -114,11 +114,10 @@ module tt_um_ultrasage_danz (
     end
 
     // ─── Output Logic (Moore) ─────────────────────────────────────────
-    reg pump_internal, invalid_flag_internal;
+    
     always @(*) begin
         // Safe defaults
-        pump_internal = 1'b0;
-        invalid_flag_internal = 1'b0;
+
 
         case (current_state)
             IDLE: begin pump_internal = 1'b0; invalid_flag_internal = 1'b0; end

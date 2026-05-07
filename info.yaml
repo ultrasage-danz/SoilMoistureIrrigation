@@ -1,9 +1,9 @@
 # Tiny Tapeout project information
-project: "IEEE Division 1 Open Silicon Tapeout Initiative Project"
+project:
   title:        "Soil Moisture Irrigation Controller"      # Project title
   author:       "Shadia, Elijah, Oluwatomiwa, Emmanuel, Daniel, Orobosa"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "A finite state machine that controls irrigation pump based on soil moisture levels detected by two comparators, with error handling for invalid states"      # One line description
+  description:  " An IEEE Division 1 Open Silicon Tapeout Initiative Project, this is a finite state machine that controls irrigation pump based on soil moisture levels detected by two comparators, with error handling for invalid states"      # One line description
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     0       # Clock frequency in Hz (or 0 if not applicable)
 

@@ -14,7 +14,7 @@ def invalid_flag(dut):
     return (dut.uo_out.value.to_unsigned() >> INVALID_FLAG_BIT) & 1
 
 async def do_reset(dut, ui_in_val=0b00000001):
-    cocotb.start_soon(Clock(dut.clk, 10, unit="us").start())
+    cocotb.start_soon(Clock(dut.clk, 1, unit="ms").start())
     dut.ena.value    = 1
     dut.uio_in.value = 0
     dut.ui_in.value  = ui_in_val

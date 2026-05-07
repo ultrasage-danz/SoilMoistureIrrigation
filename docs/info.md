@@ -6,10 +6,9 @@ sections.
 You can also include images in this folder and reference them in the markdown. Each image must be less than
 512 kb in size, and the combined size of all images must be less than 1 MB.
 -->
-### About this Project
-This is a project based on the **IEEE Division 1 Open Silicon Tapeout Initiative**
 ## How it works
 
+This is a project based on the **IEEE Division 1 Open Silicon Tapeout Initiative**
 
 The Soil Moisture Irrigation Controller is a finite state machine (FSM) that automatically controls an irrigation pump based on soil moisture levels. It uses two comparators to detect moisture levels:
 

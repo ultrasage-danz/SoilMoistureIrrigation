@@ -6,6 +6,10 @@ sections.
 You can also include images in this folder and reference them in the markdown. Each image must be less than
 512 kb in size, and the combined size of all images must be less than 1 MB.
 -->
+## About this project
+
+This is a project based on the **IEEE Division 1 Open Silicon Tapeout Initiative**
+
 ## How it works
 
 This is a project based on the **IEEE Division 1 Open Silicon Tapeout Initiative**
